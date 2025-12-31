@@ -2,27 +2,20 @@
   "use strict";
 
   // ======================
-  // ✅ CONFIG (FINAL)
+  // ✅ CONFIG
   // ======================
-  // Worker شما (اکانتش هرچی باشه مهم نیست)
   const WORKER_BASE =
     window.ASANROOZ_WORKER_BASE ||
     "https://asanrooz-check-captcha.mr-rahimi-kiasari.workers.dev";
 
-  // مسیرهای استاندارد Worker جدید
-  const CAPTCHA_VERIFY_ENDPOINT =
-    window.ASANROOZ_CAPTCHA_VERIFY_ENDPOINT || `${WORKER_BASE}/api/check-captcha`;
-
   const MESSAGE_ENDPOINT =
     window.ASANROOZ_MESSAGE_ENDPOINT || `${WORKER_BASE}/api/contact`;
 
-  // Timeout ها
-  const CAPTCHA_TIMEOUT_MS = 12_000;
-  const MESSAGE_TIMEOUT_MS = 20_000;
+  const MESSAGE_TIMEOUT_MS = 25_000;
 
   // ======================
   // Anti-spam / Quarantine (Front-only)
-  // 3 موفقیت در 10 دقیقه => قرنطینه 1 ساعت
+  // 3 successful sends in 10 min => 1 hour quarantine
   // ======================
   const LS_SENDS = "asanrooz_contact_sends_v1";
   const LS_QUAR = "asanrooz_contact_quarantine_until_v1";
@@ -43,6 +36,7 @@
   function countPersianLetters(name) {
     return String(name || "").replace(/[\s\u200c]/g, "").length;
   }
+
   function isValidEmailByRules(email) {
     const v = String(email || "").trim();
     if (v.length < 7) return false;
@@ -89,22 +83,57 @@
     }
   }
 
+  function headerPick(headers, key) {
+    try {
+      return headers.get(key) || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
   async function fetchJson(url, payload, timeoutMs) {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort("TIMEOUT"), timeoutMs);
+    const t = setTimeout(() => ctrl.abort(new Error("TIMEOUT")), timeoutMs);
 
+    let res, text, data;
     try {
-      const res = await fetch(url, {
+      res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
         signal: ctrl.signal,
       });
 
-      const text = await res.text().catch(() => "");
-      const data = safeJsonParse(text);
+      text = await res.text().catch(() => "");
+      data = safeJsonParse(text);
 
-      return { ok: res.ok, status: res.status, data, text };
+      return {
+        ok: res.ok,
+        status: res.status,
+        url,
+        data,
+        text,
+        headers: {
+          cfRay: headerPick(res.headers, "cf-ray"),
+          server: headerPick(res.headers, "server"),
+          date: headerPick(res.headers, "date"),
+          contentType: headerPick(res.headers, "content-type"),
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        url,
+        data: null,
+        text: "",
+        headers: {},
+        networkError: {
+          name: err?.name || "Error",
+          message: String(err?.message || err),
+          stack: String(err?.stack || ""),
+        },
+      };
     } finally {
       clearTimeout(t);
     }
@@ -201,7 +230,7 @@
   }
 
   // ======================
-  // Modal (uses your HTML modal)
+  // Modal (your HTML modal)
   // ======================
   const modal = document.getElementById("modal");
   const modalTitle = document.getElementById("modalTitle");
@@ -257,7 +286,7 @@
         // روی همان بخش بمان
         if (contactSection) {
           try {
-            contactSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            contactSection.scrollIntoView({ behavior: "auto", block: "start" });
           } catch (_) {}
         }
       }
@@ -329,60 +358,60 @@
   }
 
   // ======================
-  // Worker response helpers
+  // Error formatting (FULL DEBUG)
   // ======================
-  function isCaptchaPositive(data) {
-    if (!data) return false;
+  function stringifyShort(obj) {
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch (_) {
+      return String(obj);
+    }
+  }
 
-    // حالت‌های رایج:
-    // { ok:true, success:true } یا { success:true } یا { human:true }
-    if (data.ok === true || data.success === true || data.human === true || data.valid === true) return true;
+  function buildDebugText(prefixFa, r) {
+    // r: output of fetchJson
+    const parts = [];
+    parts.push(prefixFa);
 
-    // اگر worker جزئیات گوگل را هم بدهد:
-    if (data.details && data.details.success === true) return true;
+    if (r?.networkError) {
+      parts.push("\n— جزئیات فنی —");
+      parts.push(`NetworkError: ${r.networkError.name}: ${r.networkError.message}`);
+      return parts.join("\n");
+    }
 
+    parts.push("\n— جزئیات فنی —");
+    parts.push(`URL: ${r?.url || "—"}`);
+    parts.push(`HTTP: ${r?.status ?? "—"}`);
+    if (r?.headers?.cfRay) parts.push(`CF-RAY: ${r.headers.cfRay}`);
+
+    const data = r?.data;
+    if (data && typeof data === "object") {
+      if (data.error) parts.push(`error: ${data.error}`);
+      if (data.message) parts.push(`message: ${data.message}`);
+      if (data.details) parts.push(`details: ${stringifyShort(data.details)}`);
+    } else if (r?.text) {
+      parts.push(`raw: ${r.text.slice(0, 800)}`);
+    } else {
+      parts.push("raw: (empty)");
+    }
+
+    return parts.join("\n");
+  }
+
+  function isCaptchaFailure(data) {
+    const err = String(data?.error || "");
+    if (err.includes("captcha")) return true;
+    // گوگل v2 معمولاً error-codes می‌دهد:
+    const codes = data?.details?.["error-codes"];
+    if (Array.isArray(codes) && codes.length) return true;
     return false;
   }
 
-  function isMessageSuccess(data) {
-    if (!data) return false;
-    return data.success === true || data.ok === true;
-  }
-
   // ======================
-  // Network calls
+  // Send (ONLY ONE REQUEST)
   // ======================
-  async function verifyCaptchaOnWorker(token) {
-    // تلاش اصلی: /api/check-captcha
-    const primary = await fetchJson(
-      CAPTCHA_VERIFY_ENDPOINT,
-      { captchaToken: token, page: location.href },
-      CAPTCHA_TIMEOUT_MS
-    );
-
-    // اگر مسیر اشتباه بود، fallback: خود روت worker
-    if (!primary.ok && (primary.status === 404 || primary.status === 405)) {
-      const fallback = await fetchJson(
-        WORKER_BASE,
-        { captchaToken: token, page: location.href },
-        CAPTCHA_TIMEOUT_MS
-      );
-      return fallback;
-    }
-
-    return primary;
-  }
-
   async function sendMessageToWorker(payload) {
-    const primary = await fetchJson(MESSAGE_ENDPOINT, payload, MESSAGE_TIMEOUT_MS);
-
-    // fallback: اگر endpoint جدا نبود
-    if (!primary.ok && (primary.status === 404 || primary.status === 405)) {
-      const fallback = await fetchJson(`${WORKER_BASE}/api/contact`, payload, MESSAGE_TIMEOUT_MS);
-      return fallback;
-    }
-
-    return primary;
+    return await fetchJson(MESSAGE_ENDPOINT, payload, MESSAGE_TIMEOUT_MS);
   }
 
   // ======================
@@ -410,28 +439,9 @@
     const prevDisabled = sendBtn?.disabled;
     if (sendBtn) sendBtn.disabled = true;
 
+    const token = captchaToken();
+
     try {
-      const token = captchaToken();
-
-      // 1) Verify captcha
-      const capRes = await verifyCaptchaOnWorker(token);
-
-      // داخل submit، بعد از capRes:
-      if (!capRes.ok || !isCaptchaPositive(capRes.data)) {
-        resetCaptcha();
-      
-        // اگر Worker پیام/جزییات داشت، برای دیباگ نمایش بده
-        const msg =
-          capRes?.data?.message ||
-          (capRes?.data?.details?.["error-codes"] ? `خطای کپچا: ${capRes.data.details["error-codes"].join(", ")}` : "") ||
-          "لطفا تایید کنید که ربات نیستید!";
-      
-        openModal("خطا", msg, null);
-        return;
-      }
-
-
-      // 2) Send message (to Worker)
       const payload = {
         name: normalizeSpaces(nameEl.value),
         email: String(emailEl.value || "").trim(),
@@ -445,13 +455,24 @@
 
       const sendRes = await sendMessageToWorker(payload);
 
-      if (!sendRes.ok || !isMessageSuccess(sendRes.data)) {
-        // اگر worker پیغام خطای خاص داد، همینجا می‌تونی نمایش بدی
-        openModal("خطا", "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.", null);
+      // DEBUG log
+      console.log("[asanrooz][contact] response:", sendRes);
+
+      // Fail?
+      if (!sendRes.ok || !(sendRes.data && (sendRes.data.success === true || sendRes.data.ok === true))) {
+        // اگر خطا مربوط به کپچا بود، ریست کنیم تا دوباره تیک بزند
+        if (isCaptchaFailure(sendRes.data)) resetCaptcha();
+
+        // پیام کاربرپسند + جزئیات کامل
+        const userMsg =
+          sendRes?.data?.message ||
+          (sendRes?.networkError ? "خطای شبکه یا تایم‌اوت رخ داد." : "پاسخ نامعتبر از سرور دریافت شد.");
+
+        openModal("خطا", buildDebugText(userMsg, sendRes), null);
         return;
       }
 
-      // ✅ success: ثبت موفقیت برای قرنطینه
+      // ✅ success
       registerSuccessfulSend();
 
       openModal(
@@ -459,6 +480,7 @@
         "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
         null,
         () => {
+          // فقط در موفقیت ریست شود
           form.reset();
           resetCaptcha();
           try {
@@ -469,14 +491,14 @@
         }
       );
     } catch (err) {
-      openModal("خطا", "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.", null);
+      // خطای غیرمنتظره
+      const msg = String(err?.message || err);
+      openModal("خطا", `خطای غیرمنتظره رخ داد:\n${msg}`, null);
     } finally {
       if (sendBtn) sendBtn.disabled = prevDisabled || false;
     }
   });
 
-  // Optional: Debug in console (helps)
   console.info("[asanrooz] Worker base:", WORKER_BASE);
-  console.info("[asanrooz] captcha endpoint:", CAPTCHA_VERIFY_ENDPOINT);
   console.info("[asanrooz] message endpoint:", MESSAGE_ENDPOINT);
 })();
