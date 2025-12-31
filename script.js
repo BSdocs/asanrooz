@@ -416,11 +416,20 @@
       // 1) Verify captcha
       const capRes = await verifyCaptchaOnWorker(token);
 
+      // داخل submit، بعد از capRes:
       if (!capRes.ok || !isCaptchaPositive(capRes.data)) {
         resetCaptcha();
-        openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null);
+      
+        // اگر Worker پیام/جزییات داشت، برای دیباگ نمایش بده
+        const msg =
+          capRes?.data?.message ||
+          (capRes?.data?.details?.["error-codes"] ? `خطای کپچا: ${capRes.data.details["error-codes"].join(", ")}` : "") ||
+          "لطفا تایید کنید که ربات نیستید!";
+      
+        openModal("خطا", msg, null);
         return;
       }
+
 
       // 2) Send message (to Worker)
       const payload = {
