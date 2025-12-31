@@ -1,1 +1,639 @@
-<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=5396920&Code=ly8PsJr7AXWpPk9QinCcVLw0g8SBvwRG'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=5396920&Code=ly8PsJr7AXWpPk9QinCcVLw0g8SBvwRG' alt='' style='cursor:pointer' code='ly8PsJr7AXWpPk9QinCcVLw0g8SBvwRG'></a>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>آسان‌روز</title>
+
+  <!-- Google Material Symbols Rounded -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@1&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#F7F6F2;
+      --blue:#1758C8;
+      --orange:#F7941D;
+      --text:#0f172a;
+
+      --safe: clamp(18px, 4vw, 44px);
+      --frameW: min(860px, calc(100vw - (var(--safe) * 2)));
+      --logoW: clamp(120px, 20vw, 220px);
+      --brandW: clamp(170px, 36vw, 380px);
+      --gap: clamp(12px, 2.2vw, 26px);
+
+      --border: rgba(15,23,42,.18);
+      --radius: 28px;
+    }
+
+    @font-face{
+      font-family: "IRANSans";
+      src: url("./IRANSans.ttf") format("truetype");
+      font-display: swap;
+    }
+    @font-face{
+      font-family: "Samim";
+      src: url("./Samim.woff2") format("woff2");
+      font-display: swap;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    /* ===== Cursor (ALWAYS orange) ===== */
+    html, body, *{
+      cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='42' height='42' viewBox='0 0 42 42'><circle cx='14' cy='14' r='9' fill='%23F7941D' fill-opacity='0.30'/><circle cx='14' cy='14' r='4.2' fill='%23F7941D'/></svg>") 14 14, auto !important;
+    }
+
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--text);
+      display:grid;
+      place-items:center;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:980px;
+      padding:var(--safe);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:22px;
+    }
+
+    /* ===== Brand (clickable) ===== */
+    .brand-link{
+      width:var(--frameW);
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      -webkit-tap-highlight-color: transparent;
+
+      user-select:none;
+      -webkit-user-select:none;
+      -ms-user-select:none;
+    }
+
+    .brand-frame{
+      width:100%;
+      padding:clamp(16px,3.6vw,36px);
+      border:2px solid var(--border);
+      border-radius:var(--radius);
+    }
+
+    .brand-lockup{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:var(--gap);
+      flex-wrap:wrap;
+
+      user-select:none;
+      -webkit-user-select:none;
+      -ms-user-select:none;
+    }
+
+    .brand-lockup img{
+      max-width:100%;
+      height:auto;
+      display:block;
+
+      pointer-events:none;
+      user-select:none;
+      -webkit-user-select:none;
+      -ms-user-select:none;
+      -webkit-user-drag:none;
+      user-drag:none;
+    }
+
+    .logo{ width:var(--logoW); min-width:110px; }
+    .brand{ width:var(--brandW); min-width:160px; }
+
+    /* ===== Notice ===== */
+    section.notice{
+      width:var(--frameW);
+      padding:clamp(18px,3.2vw,28px);
+      border-radius:22px;
+      background:var(--bg);
+      border:1px solid rgba(15,23,42,.10);
+      box-shadow:0 16px 45px rgba(2,6,23,.10);
+
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+
+      direction:rtl;
+      text-align:right;
+      user-select:none;
+    }
+
+    .notice .pill{
+      width:fit-content;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-inline-end:auto;
+
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(247,148,29,.18);
+      border:1px solid rgba(247,148,29,.45);
+
+      font-family:"IRANSans",system-ui,sans-serif;
+      font-weight:900;
+      font-size:13px;
+      color:#7a3f00;
+      white-space:nowrap;
+    }
+
+    .pill .mi{
+      font-family:"Material Symbols Rounded";
+      font-weight:400;
+      font-size:22px;
+      line-height:1;
+      color:currentColor;
+      transform:translateY(1px);
+      font-variation-settings:
+        "FILL" 1,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+    }
+    [dir="rtl"] .pill .mi{ transform:translateY(1px) scaleX(-1); }
+
+    h1{
+      margin:0;
+      font-family:"IRANSans",sans-serif;
+      font-weight:900;
+      font-size:clamp(20px,3vw,34px);
+      line-height:1.7;
+    }
+
+    .notice p.desc{
+      margin:0;
+      font-family:"Samim",sans-serif;
+      font-weight:800;
+      font-size:clamp(14px,1.4vw,16px);
+      line-height:2;
+      color:rgba(15,23,42,.72);
+
+      text-align:justify;
+      text-align-last:right;
+      text-justify:inter-word;
+      word-spacing:0.04em;
+      overflow-wrap:break-word;
+    }
+
+    .divider{ height:1px; background:rgba(15,23,42,.10); }
+
+    .bottom{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .loading{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-family:"IRANSans";
+      font-weight:900;
+      color:rgba(23,88,200,.95);
+      white-space:nowrap;
+    }
+
+    .dots{ display:inline-flex; gap:4px; }
+    .dot{
+      width:6px; height:6px;
+      border-radius:50%;
+      background:var(--orange);
+      opacity:.35;
+      animation:pulse 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2){ animation-delay:.15s; }
+    .dot:nth-child(3){ animation-delay:.3s; }
+
+    @keyframes pulse{
+      0%,100%{ opacity:.35; }
+      50%{ opacity:1; }
+    }
+
+    .help{
+      margin:0;
+      font-family:"Samim";
+      font-weight:800;
+      color:rgba(15,23,42,.65);
+    }
+
+    .help a{
+      color:var(--blue);
+      text-decoration:none;
+      font-weight:900;
+    }
+    .help a:hover{ text-decoration:underline; }
+
+    /* ===== Contact Form ===== */
+    section.contact{
+      width:var(--frameW);
+      padding:clamp(18px,3.2vw,28px);
+      border-radius:22px;
+      background:var(--bg);
+      border:1px solid rgba(15,23,42,.10);
+      box-shadow:0 16px 45px rgba(2,6,23,.10);
+
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+
+      direction:rtl;
+      text-align:right;
+      user-select:none;
+    }
+
+    .contact h2{
+      margin:0;
+      font-family:"IRANSans",sans-serif;
+      font-weight:900;
+      font-size:clamp(16px,2.2vw,22px);
+      line-height:1.9;
+    }
+
+    .contact form{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .field label{
+      display:block;
+      margin:0 0 6px;
+      font-family:"IRANSans";
+      font-weight:900;
+      font-size:13px;
+      color:rgba(15,23,42,.85);
+    }
+
+    .field input,
+    .field textarea{
+      width:100%;
+      border-radius:16px;
+      border:1px solid rgba(15,23,42,.12);
+      background:rgba(255,255,255,.55);
+      padding:12px 12px;
+      font-family:"Samim","IRANSans",system-ui,sans-serif;
+      font-weight:800;
+      font-size:14px;
+      outline:none;
+      transition: box-shadow .2s ease, border-color .2s ease, background .2s ease;
+
+      user-select:text;
+      -webkit-user-select:text;
+    }
+
+    .field.message{ grid-column:1 / -1; }
+
+    .field textarea{
+      min-height: clamp(220px, 34vh, 360px);
+      resize:vertical;
+    }
+
+    .field input:focus,
+    .field textarea:focus{
+      border-color: rgba(23,88,200,.45);
+      box-shadow: 0 10px 26px rgba(23,88,200,.14);
+      background: rgba(255,255,255,.75);
+    }
+
+    /* ===== Actions row: captcha + send (no card, no section) ===== */
+    .actions-row{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+
+    /* captcha normal */
+    .captcha-normal{
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      align-items:flex-start;
+      justify-content:flex-end;
+      user-select:none;
+    }
+
+    .captcha-box{
+      transform: scale(.92);
+      transform-origin: 100% 100%;
+    }
+
+    /* send button: text centered, icon opposite */
+    .btn{
+      border:none;
+      border-radius:999px;
+      padding:12px 54px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+
+      font-family:"IRANSans";
+      font-weight:900;
+      background:var(--blue);
+      color:white;
+
+      box-shadow:0 10px 25px rgba(2,6,23,.12);
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      user-select:none;
+      white-space:nowrap;
+      position:relative;
+      min-height:46px;
+      flex: 0 0 auto;
+    }
+
+    .btn:hover{
+      transform: translateY(-1px);
+      box-shadow:0 14px 30px rgba(2,6,23,.16);
+    }
+
+    .btn:disabled{
+      opacity:.65;
+      transform:none;
+    }
+
+    .btn .btn-text{
+      display:inline-block;
+      text-align:center;
+      line-height:1;
+    }
+
+    .btn .mi{
+      font-family:"Material Symbols Rounded";
+      font-weight:400;
+      font-size:22px;
+      line-height:1;
+      font-variation-settings:
+        "FILL" 1,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+
+      position:absolute;
+      inset-inline-end:16px; /* در RTL => سمت چپ */
+      top:50%;
+      transform: translateY(-50%) scaleX(-1);
+      pointer-events:none;
+    }
+
+    @media (max-width:640px){
+      .bottom{ flex-direction:column; align-items:flex-start; }
+      .form-grid{ grid-template-columns:1fr; }
+      .field.message{ grid-column:auto; }
+
+      .actions-row{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+      }
+
+      .btn{ width:100%; }
+
+      /* ✅ موبایل: چک باکس reCAPTCHA افقی وسط‌چین شود */
+      .captcha-normal{
+        align-items:center;        /* مرکز افقی */
+        text-align:center;
+      }
+      .captcha-box{
+        transform: scale(.92);
+        transform-origin: 50% 50%;
+      }
+    }
+
+    /* ===== Modal (Popup) with animation ===== */
+    .modal{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:9999;
+
+      opacity:0;
+      pointer-events:none;
+      transition: opacity 380ms ease;
+    }
+    .modal.is-open{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .modal-backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(2,6,23,.55);
+      backdrop-filter: blur(4px);
+      opacity:0;
+      transition: opacity 420ms ease;
+    }
+    .modal.is-open .modal-backdrop{ opacity:1; }
+
+    .modal-card{
+      position:relative;
+      width:min(520px, 100%);
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.22);
+      background: rgba(247,246,242,.96);
+      box-shadow:0 30px 80px rgba(2,6,23,.35);
+      padding:18px 18px 14px;
+      direction:rtl;
+      text-align:right;
+
+      transform: translateY(14px) scale(.98);
+      opacity:0;
+      transition: transform 460ms cubic-bezier(.2,.9,.2,1), opacity 460ms ease;
+      will-change: transform, opacity;
+    }
+    .modal.is-open .modal-card{
+      transform: translateY(0) scale(1);
+      opacity:1;
+    }
+
+    .modal.is-closing{
+      opacity:0;
+      pointer-events:none;
+    }
+    .modal.is-closing .modal-backdrop{ opacity:0; }
+    .modal.is-closing .modal-card{
+      transform: translateY(10px) scale(.985);
+      opacity:0;
+    }
+
+    .modal-title{
+      margin:0 0 8px;
+      font-family:"IRANSans";
+      font-weight:900;
+      font-size:16px;
+      line-height:1.9;
+      color: var(--orange);
+    }
+
+    .modal-text{
+      margin:0 0 14px;
+      font-family:"Samim";
+      font-weight:800;
+      font-size:14px;
+      line-height:2;
+      color:rgba(15,23,42,.78);
+      white-space:pre-line;
+    }
+
+    .modal-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+    }
+
+    .modal-ok{
+      border:none;
+      border-radius:999px;
+      padding:10px 16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+
+      font-family:"IRANSans";
+      font-weight:900;
+
+      background: var(--blue);
+      color:#fff;
+      box-shadow:0 10px 25px rgba(2,6,23,.12);
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .modal-ok:hover{
+      transform: translateY(-1px);
+      box-shadow:0 14px 30px rgba(2,6,23,.16);
+    }
+    .modal-ok:active{ transform: translateY(0); }
+  </style>
+</head>
+
+<body>
+<main class="wrap">
+
+  <!-- Clickable brand area -> codbanoo.ir -->
+  <a class="brand-link" id="brandLink" href="https://codbanoo.ir" target="_blank" rel="noopener noreferrer" aria-label="رفتن به codbanoo.ir">
+    <div class="brand-frame" id="brandFrame">
+      <div class="brand-lockup">
+        <img class="logo" src="asanrooz-logo.svg" alt="">
+        <img class="brand" src="brand.svg" alt="">
+      </div>
+    </div>
+  </a>
+
+  <section class="notice">
+    <div class="pill">
+      <span class="mi" aria-hidden="true">build</span>
+      <span>در حال بروزرسانی زیرساخت</span>
+    </div>
+
+    <h1>برای بهتر شدن، موقتاً در دسترس نیستیم.</h1>
+
+    <p class="desc">
+      ما در آسان‌روز روی بروزرسانی زیرساخت و آماده‌سازی ابزارهای جدید کار می‌کنیم
+      تا تجربه‌ای سریع‌تر و پایدارتر ارائه کنیم.
+    </p>
+
+    <div class="divider"></div>
+
+    <div class="bottom">
+      <div class="loading">
+        در حال آماده‌سازی
+        <span class="dots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </span>
+      </div>
+
+      <p class="help">
+        اگر کار فوری دارید، از بخش
+        <a href="#contact" id="contactLink">تماس با ما</a>
+        پیام بدهید.
+      </p>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="contact" aria-label="تماس با ما">
+    <h2>تماس با ما</h2>
+
+    <form id="contactForm" action="" method="post" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label for="name">نام</label>
+          <input id="name" name="name" type="text" placeholder="مثال: علی" autocomplete="name" />
+        </div>
+
+        <div class="field">
+          <label for="email">ایمیل</label>
+          <input id="email" name="email" type="email" placeholder="مثال: name@example.com" autocomplete="email" />
+        </div>
+
+        <div class="field message">
+          <label for="message">پیام</label>
+          <textarea id="message" name="message" placeholder="موضوع پیام + توضیحات کامل…"></textarea>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <div class="captcha-normal">
+          <div class="captcha-box">
+            <div class="g-recaptcha" data-sitekey="6LfgujssAAAAADfRVnLr063DFSR8o_70Aub5_ZSn"></div>
+          </div>
+        </div>
+
+        <button id="sendBtn" type="submit" class="btn">
+          <span class="btn-text">ارسال پیام</span>
+          <span class="mi" aria-hidden="true">send</span>
+        </button>
+      </div>
+    </form>
+  </section>
+
+</main>
+
+<!-- Modal -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-backdrop" aria-hidden="true"></div>
+  <div class="modal-card">
+    <h3 class="modal-title" id="modalTitle">پیام</h3>
+    <p class="modal-text" id="modalText"></p>
+    <div class="modal-actions">
+      <button type="button" class="modal-ok" id="modalOk">تایید</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================
+     JS (load at end for speed)
+     1) reCAPTCHA API (renders widget)
+     2) your script.js (handles validation + modal + calls Worker)
+====================== -->
+<script src="https://www.google.com/recaptcha/api.js?hl=fa" async defer></script>
+<script src="./script.js"></script>
+
+</body>
+</html>
