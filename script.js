@@ -25,10 +25,31 @@
   const ONE_HOUR = 60 * 60 * 1000;
 
   // ======================
+  // ✅ Public messages only (NO DEBUG)
+  // ======================
+  const MSG = Object.freeze({
+    // validation
+    NAME_REQUIRED: "لطفاً نام خود را وارد کنید.",
+    NAME_FA: "لطفا نام خود را به فارسی وارد کنید.",
+    NAME_MIN: "نام وارد شده صحیح نیست.",
+    EMAIL_REQUIRED: "ایمیل خود را وارد کنید.",
+    EMAIL_INVALID: "ایمیل وارد شده صحیح نیست.",
+    MESSAGE_REQUIRED: "پیام خود را وارد کنید.",
+    MESSAGE_MIN: "متن پیام باید حداقل ۳۰ کاراکتر باشد.",
+    MESSAGE_SPAM: "لطفا پیام خود را بصورت صحیح بنویسید.",
+    CAPTCHA_REQUIRED: "لطفا تایید کنید که ربات نیستید!",
+
+    // server/general
+    SEND_FAILED: "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
+    SUCCESS_TITLE: "توجه",
+    SUCCESS_TEXT:
+      "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
+  });
+
+  // ======================
   // Helpers
   // ======================
   const now = () => Date.now();
-  const log = (...args) => console.log("[asanrooz]", ...args);
 
   function normalizeSpaces(s) {
     return String(s || "").replace(/\s+/g, " ").trim();
@@ -88,9 +109,9 @@
     }
   }
 
-  function withTimeout(promiseFn, ms, label) {
+  function withTimeout(promiseFn, ms) {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(label || "TIMEOUT"), ms);
+    const id = setTimeout(() => controller.abort(), ms);
 
     const wrapped = (async () => {
       try {
@@ -101,26 +122,6 @@
     })();
 
     return { wrapped, controller };
-  }
-
-  function formatDetailsBlock(lines) {
-    const clean = (lines || []).filter(Boolean).map(String);
-    if (!clean.length) return "";
-    return `\n\n— جزئیات فنی —\n${clean.join("\n")}`;
-  }
-
-  function pickWorkerMessage(data) {
-    if (!data) return "";
-    return String(data.message || data.error || "").trim();
-  }
-
-  function stringifyShort(obj, max = 800) {
-    try {
-      const s = JSON.stringify(obj);
-      return s.length > max ? s.slice(0, max) + "…" : s;
-    } catch (_) {
-      return "";
-    }
   }
 
   function collectClientMeta() {
@@ -231,9 +232,46 @@
   }
 
   // ======================
-  // Global UX rules
+  // ✅ “Soft” anti-devtools (NOT secure, but reduces casual access)
   // ======================
-  document.addEventListener("contextmenu", (e) => e.preventDefault(), { capture: true });
+  (function softLockDevtools() {
+    // 1) Disable context menu (you already wanted this)
+    document.addEventListener("contextmenu", (e) => e.preventDefault(), { capture: true });
+
+    // 2) Block common shortcuts (still bypassable)
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        const k = (e.key || "").toLowerCase();
+        const ctrl = e.ctrlKey || e.metaKey;
+
+        // F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+Shift+K
+        if (
+          k === "f12" ||
+          (ctrl && e.shiftKey && (k === "i" || k === "j" || k === "c" || k === "k")) ||
+          (ctrl && k === "u")
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        return true;
+      },
+      true
+    );
+
+    // 3) Silence console (reduce accidental leaks; still bypassable)
+    try {
+      const noop = () => {};
+      if (!window.__ASANROOZ_ALLOW_CONSOLE__) {
+        console.log = noop;
+        console.info = noop;
+        console.warn = noop;
+        console.error = noop;
+        console.debug = noop;
+      }
+    } catch (_) {}
+  })();
 
   // ======================
   // Elements
@@ -260,14 +298,15 @@
   }
 
   // ======================
-  // ✅ Message counter (FIXED: reset works)
+  // ✅ Message counter (RESET SAFE)
   // ======================
   let updateCounter = null;
+  let counterEl = null;
 
   if (msgEl) {
-    const counter = document.createElement("div");
-    counter.id = "msgCounter";
-    counter.style.cssText = `
+    counterEl = document.createElement("div");
+    counterEl.id = "msgCounter";
+    counterEl.style.cssText = `
       margin-top: 8px;
       font-size: .9rem;
       line-height: 1.6;
@@ -276,12 +315,12 @@
       user-select: none;
     `;
 
-    msgEl.insertAdjacentElement("afterend", counter);
+    msgEl.insertAdjacentElement("afterend", counterEl);
 
     updateCounter = () => {
       const len = (msgEl.value || "").length;
-      counter.textContent = `${len} / 30`;
-      counter.style.color = len < 30 ? "#F7941D" : "#1758C8";
+      counterEl.textContent = `${len} / 30`;
+      counterEl.style.color = len < 30 ? "#F7941D" : "#1758C8";
     };
 
     msgEl.addEventListener("input", updateCounter);
@@ -299,16 +338,14 @@
   let afterCloseFocusEl = null;
   let pendingAfterCloseAction = null;
 
-  function openModal(title, text, focusEl, afterClose, detailsLines) {
-    const details = formatDetailsBlock(detailsLines);
-
+  function openModal(title, text, focusEl, afterClose) {
     if (!modal || !modalTitle || !modalText || !modalOk) {
-      alert(`${title}\n\n${text}${details ? "\n\n" + details : ""}`);
+      alert(`${title}\n\n${text}`);
       return;
     }
 
     modalTitle.textContent = title || "پیام";
-    modalText.textContent = String(text || "") + String(details || "");
+    modalText.textContent = String(text || "");
 
     afterCloseFocusEl = focusEl || null;
     pendingAfterCloseAction = typeof afterClose === "function" ? afterClose : null;
@@ -352,6 +389,7 @@
 
   if (modalOk) modalOk.addEventListener("click", closeModal);
 
+  // Escape را بی‌اثر می‌کنیم (طبق خواسته قبلی)
   document.addEventListener("keydown", (e) => {
     if (modal && modal.classList.contains("is-open") && (e.key === "Escape" || e.key === "Esc")) {
       e.preventDefault();
@@ -367,33 +405,33 @@
     const messageRaw = String(msgEl?.value || "");
     const messageTrim = messageRaw.trim();
 
-    if (!name) return (openModal("خطا", "لطفاً نام خود را وارد کنید.", nameEl), false);
-    if (!onlyPersianChars(name))
-      return (openModal("خطا", "لطفا نام خود را به فارسی وارد کنید.", nameEl), false);
-    if (countPersianLetters(name) < 3)
-      return (openModal("خطا", "نام وارد شده صحیح نیست.", nameEl), false);
+    if (!name) return (openModal("خطا", MSG.NAME_REQUIRED, nameEl), false);
+    if (!onlyPersianChars(name)) return (openModal("خطا", MSG.NAME_FA, nameEl), false);
+    if (countPersianLetters(name) < 3) return (openModal("خطا", MSG.NAME_MIN, nameEl), false);
 
-    if (!email) return (openModal("خطا", "ایمیل خود را وارد کنید.", emailEl), false);
-    if (!isValidEmailByRules(email))
-      return (openModal("خطا", "ایمیل وارد شده صحیح نیست.", emailEl), false);
+    if (!email) return (openModal("خطا", MSG.EMAIL_REQUIRED, emailEl), false);
+    if (!isValidEmailByRules(email)) return (openModal("خطا", MSG.EMAIL_INVALID, emailEl), false);
 
-    if (!messageTrim) return (openModal("خطا", "پیام خود را وارد کنید.", msgEl), false);
-    if (messageTrim.length < 30)
-      return (openModal("خطا", "متن پیام باید حداقل ۳۰ کاراکتر باشد.", msgEl), false);
+    if (!messageTrim) return (openModal("خطا", MSG.MESSAGE_REQUIRED, msgEl), false);
+    if (messageTrim.length < 30) return (openModal("خطا", MSG.MESSAGE_MIN, msgEl), false);
 
     const messageNoWhitespace = messageRaw.replace(/\s+/g, "");
-    if (messageNoWhitespace.length === 0)
-      return (openModal("خطا", "لطفا پیام خود را بصورت صحیح بنویسید.", msgEl), false);
+    if (messageNoWhitespace.length === 0) return (openModal("خطا", MSG.MESSAGE_SPAM, msgEl), false);
 
     const tok = captchaToken();
-    if (!tok) return (openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null), false);
+    if (!tok) return (openModal("خطا", MSG.CAPTCHA_REQUIRED, null), false);
 
     return true;
   }
 
   // ======================
-  // Network calls
+  // Network calls (NO debug to user)
   // ======================
+  function isLikelyCaptchaErrorFromServer(data) {
+    const err = (data && (data.error || data.code)) ? String(data.error || data.code) : "";
+    return err === "captcha_failed" || err === "missing_captcha";
+  }
+
   async function sendMessageToBackend(payload) {
     const requestFn = async (signal) => {
       const res = await fetch(MESSAGE_ENDPOINT, {
@@ -406,65 +444,26 @@
       const text = await res.text().catch(() => "");
       const data = safeJsonParse(text);
 
-      if (!res.ok) {
-        const msg = pickWorkerMessage(data) || "MESSAGE_SEND_FAILED";
-        const err = new Error(msg);
-        err.__http = { url: MESSAGE_ENDPOINT, status: res.status, data, text };
-        throw err;
+      // success checks
+      if (res.ok) {
+        if (data && (data.success === true || data.ok === true)) return { ok: true, data };
+        if (!data) return { ok: true, data: null }; // some servers may return empty body with 200
       }
 
-      if (data) {
-        const ok =
-          data.ok === true ||
-          data.success === true ||
-          data.status === "ok" ||
-          data.status === "success";
-        if (!ok) {
-          const msg = pickWorkerMessage(data) || "MESSAGE_SEND_FAILED";
-          const err = new Error(msg);
-          err.__http = { url: MESSAGE_ENDPOINT, status: res.status, data, text };
-          throw err;
-        }
-        return data;
+      // if server says captcha failed -> reset it (but still show generic message)
+      if (data && isLikelyCaptchaErrorFromServer(data)) {
+        resetCaptcha();
       }
 
-      return { ok: true, raw: text };
+      // Always throw generic error outward (never leak details)
+      const err = new Error("SEND_FAILED");
+      err.__server = data || null;
+      err.__status = res.status || 0;
+      throw err;
     };
 
-    const { wrapped } = withTimeout(requestFn, MESSAGE_TIMEOUT_MS, "MESSAGE_TIMEOUT");
+    const { wrapped } = withTimeout(requestFn, MESSAGE_TIMEOUT_MS);
     return await wrapped;
-  }
-
-  function buildTechLinesFromError(err) {
-    const lines = [];
-    if (!err) return lines;
-
-    const name = err.name ? String(err.name) : "Error";
-    const msg = err.message ? String(err.message) : "";
-    lines.push(`${name}: ${msg}`);
-
-    if (String(msg).includes("TIMEOUT") || err.name === "AbortError") {
-      lines.push("Reason: timeout/abort");
-    }
-
-    const http = err.__http;
-    if (http) {
-      lines.push(`URL: ${http.url}`);
-      lines.push(`HTTP Status: ${http.status}`);
-      if (http.data) lines.push(`Body(JSON): ${stringifyShort(http.data, 1200)}`);
-      else if (http.text)
-        lines.push(
-          `Body(Text): ${String(http.text).slice(0, 1200)}${
-            String(http.text).length > 1200 ? "…" : ""
-          }`
-        );
-    }
-
-    if (msg === "Failed to fetch") {
-      lines.push("Hint: ممکن است مشکل CORS/Network باشد.");
-    }
-
-    return lines;
   }
 
   // ======================
@@ -473,6 +472,7 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // stay at contact section (no jump to top)
     if (contactSection) {
       try {
         contactSection.scrollIntoView({ behavior: "auto", block: "start" });
@@ -486,20 +486,17 @@
 
     if (!validateInputsOnly()) return;
 
-    const prevDisabled = sendBtn?.disabled;
+    const prevDisabled = !!sendBtn?.disabled;
     if (sendBtn) sendBtn.disabled = true;
-
-    log("Worker base:", WORKER_BASE);
-    log("message endpoint:", MESSAGE_ENDPOINT);
 
     try {
       const token = captchaToken();
       const meta = collectClientMeta();
 
       const payload = {
-        name: normalizeSpaces(nameEl.value),
-        email: String(emailEl.value || "").trim(),
-        message: String(msgEl.value || ""),
+        name: normalizeSpaces(nameEl?.value),
+        email: String(emailEl?.value || "").trim(),
+        message: String(msgEl?.value || ""),
         captchaToken: token,
 
         page: meta.page,
@@ -519,51 +516,36 @@
       };
 
       try {
-        const resp = await sendMessageToBackend(payload);
-        log("contact send response:", resp);
-      } catch (err) {
-        log("contact send error:", err);
-
-        const http = err && err.__http;
-        const data = http && http.data;
-        const isCaptchaFail =
-          (data && (data.error === "captcha_failed" || data.error === "missing_captcha")) ||
-          String(err?.message || "").includes("captcha");
-
-        if (isCaptchaFail) resetCaptcha();
-
-        openModal(
-          "خطا",
-          "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
-          null,
-          null,
-          buildTechLinesFromError(err)
-        );
+        await sendMessageToBackend(payload);
+      } catch (_) {
+        // ONLY generic message to user
+        openModal("خطا", MSG.SEND_FAILED, null);
         return;
       }
 
+      // success
       registerSuccessfulSend();
 
-      openModal(
-        "توجه",
-        "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
-        null,
-        () => {
-          form.reset();
-          resetCaptcha();
+      openModal(MSG.SUCCESS_TITLE, MSG.SUCCESS_TEXT, null, () => {
+        form.reset();
+        resetCaptcha();
 
-          // ✅ FIX: بعد از reset دستی شمارنده را آپدیت کن
-          if (typeof updateCounter === "function") updateCounter();
-
-          try {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          } catch (_) {
-            window.scrollTo(0, 0);
-          }
+        // ✅ FIX: counter reset after form.reset()
+        if (typeof updateCounter === "function") updateCounter();
+        else if (counterEl) {
+          counterEl.textContent = "0 / 30";
+          counterEl.style.color = "#F7941D";
         }
-      );
+
+        // after success, go top (as requested)
+        try {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (_) {
+          window.scrollTo(0, 0);
+        }
+      });
     } finally {
-      if (sendBtn) sendBtn.disabled = prevDisabled || false;
+      if (sendBtn) sendBtn.disabled = prevDisabled;
     }
   });
 })();
