@@ -260,8 +260,10 @@
   }
 
   // ======================
-  // ✅ Message counter (INSERTED)
+  // ✅ Message counter (FIXED: reset works)
   // ======================
+  let updateCounter = null;
+
   if (msgEl) {
     const counter = document.createElement("div");
     counter.id = "msgCounter";
@@ -273,14 +275,15 @@
       direction: ltr;
       user-select: none;
     `;
-    // تلاش می‌کنیم شمارنده زیر textarea قرار بگیرد
+
     msgEl.insertAdjacentElement("afterend", counter);
 
-    function updateCounter() {
+    updateCounter = () => {
       const len = (msgEl.value || "").length;
       counter.textContent = `${len} / 30`;
       counter.style.color = len < 30 ? "#F7941D" : "#1758C8";
-    }
+    };
+
     msgEl.addEventListener("input", updateCounter);
     updateCounter();
   }
@@ -305,7 +308,6 @@
     }
 
     modalTitle.textContent = title || "پیام";
-    // فعلاً دیباگ رو دست نمی‌زنیم (طبق خواسته‌ات)
     modalText.textContent = String(text || "") + String(details || "");
 
     afterCloseFocusEl = focusEl || null;
@@ -350,7 +352,6 @@
 
   if (modalOk) modalOk.addEventListener("click", closeModal);
 
-  // ESC should not close (only OK)
   document.addEventListener("keydown", (e) => {
     if (modal && modal.classList.contains("is-open") && (e.key === "Escape" || e.key === "Esc")) {
       e.preventDefault();
@@ -366,48 +367,26 @@
     const messageRaw = String(msgEl?.value || "");
     const messageTrim = messageRaw.trim();
 
-    if (!name) {
-      openModal("خطا", "لطفاً نام خود را وارد کنید.", nameEl);
-      return false;
-    }
-    if (!onlyPersianChars(name)) {
-      openModal("خطا", "لطفا نام خود را به فارسی وارد کنید.", nameEl);
-      return false;
-    }
-    if (countPersianLetters(name) < 3) {
-      openModal("خطا", "نام وارد شده صحیح نیست.", nameEl);
-      return false;
-    }
+    if (!name) return (openModal("خطا", "لطفاً نام خود را وارد کنید.", nameEl), false);
+    if (!onlyPersianChars(name))
+      return (openModal("خطا", "لطفا نام خود را به فارسی وارد کنید.", nameEl), false);
+    if (countPersianLetters(name) < 3)
+      return (openModal("خطا", "نام وارد شده صحیح نیست.", nameEl), false);
 
-    if (!email) {
-      openModal("خطا", "ایمیل خود را وارد کنید.", emailEl);
-      return false;
-    }
-    if (!isValidEmailByRules(email)) {
-      openModal("خطا", "ایمیل وارد شده صحیح نیست.", emailEl);
-      return false;
-    }
+    if (!email) return (openModal("خطا", "ایمیل خود را وارد کنید.", emailEl), false);
+    if (!isValidEmailByRules(email))
+      return (openModal("خطا", "ایمیل وارد شده صحیح نیست.", emailEl), false);
 
-    if (!messageTrim) {
-      openModal("خطا", "پیام خود را وارد کنید.", msgEl);
-      return false;
-    }
-    if (messageTrim.length < 30) {
-      openModal("خطا", "متن پیام باید حداقل ۳۰ کاراکتر باشد.", msgEl);
-      return false;
-    }
+    if (!messageTrim) return (openModal("خطا", "پیام خود را وارد کنید.", msgEl), false);
+    if (messageTrim.length < 30)
+      return (openModal("خطا", "متن پیام باید حداقل ۳۰ کاراکتر باشد.", msgEl), false);
+
     const messageNoWhitespace = messageRaw.replace(/\s+/g, "");
-    if (messageNoWhitespace.length === 0) {
-      openModal("خطا", "لطفا پیام خود را بصورت صحیح بنویسید.", msgEl);
-      return false;
-    }
+    if (messageNoWhitespace.length === 0)
+      return (openModal("خطا", "لطفا پیام خود را بصورت صحیح بنویسید.", msgEl), false);
 
-    // must be checked (token exists)
     const tok = captchaToken();
-    if (!tok) {
-      openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null);
-      return false;
-    }
+    if (!tok) return (openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null), false);
 
     return true;
   }
@@ -449,7 +428,6 @@
         return data;
       }
 
-      // 200 with non-JSON => assume success
       return { ok: true, raw: text };
     };
 
@@ -495,33 +473,27 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // stay at contact section
     if (contactSection) {
       try {
         contactSection.scrollIntoView({ behavior: "auto", block: "start" });
       } catch (_) {}
     }
 
-    // quarantine
     if (isQuarantined()) {
       openModal("خطا", quarantineMessage(minutesLeft(getQuarantineUntil())), null);
       return;
     }
 
-    // local validation + captcha checked
     if (!validateInputsOnly()) return;
 
     const prevDisabled = sendBtn?.disabled;
     if (sendBtn) sendBtn.disabled = true;
 
-    // debug logging
     log("Worker base:", WORKER_BASE);
     log("message endpoint:", MESSAGE_ENDPOINT);
 
     try {
       const token = captchaToken();
-
-      // ✅ فقط یک درخواست: مستقیم به /api/contact
       const meta = collectClientMeta();
 
       const payload = {
@@ -530,7 +502,6 @@
         message: String(msgEl.value || ""),
         captchaToken: token,
 
-        // meta
         page: meta.page,
         referrer: meta.referrer,
         userAgent: meta.userAgent,
@@ -553,7 +524,6 @@
       } catch (err) {
         log("contact send error:", err);
 
-        // اگر خطا از کپچا بود، ریستش کن تا کاربر دوباره تیک بزنه
         const http = err && err.__http;
         const data = http && http.data;
         const isCaptchaFail =
@@ -572,10 +542,8 @@
         return;
       }
 
-      // success -> register front quarantine
       registerSuccessfulSend();
 
-      // success modal: after OK => reset + scroll top
       openModal(
         "توجه",
         "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
@@ -583,6 +551,10 @@
         () => {
           form.reset();
           resetCaptcha();
+
+          // ✅ FIX: بعد از reset دستی شمارنده را آپدیت کن
+          if (typeof updateCounter === "function") updateCounter();
+
           try {
             window.scrollTo({ top: 0, behavior: "smooth" });
           } catch (_) {
