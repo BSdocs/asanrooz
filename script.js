@@ -2,20 +2,25 @@
   "use strict";
 
   // ======================
-  // ✅ CONFIG
+  // ✅ CONFIG (FINAL)
   // ======================
   const WORKER_BASE =
     window.ASANROOZ_WORKER_BASE ||
     "https://asanrooz-check-captcha.mr-rahimi-kiasari.workers.dev";
 
+  // endpoints
+  const CAPTCHA_VERIFY_ENDPOINT =
+    window.ASANROOZ_CAPTCHA_VERIFY_ENDPOINT || `${WORKER_BASE}/api/check-captcha`;
   const MESSAGE_ENDPOINT =
     window.ASANROOZ_MESSAGE_ENDPOINT || `${WORKER_BASE}/api/contact`;
 
-  const MESSAGE_TIMEOUT_MS = 25_000;
+  // timeouts
+  const CAPTCHA_TIMEOUT_MS = 12_000;
+  const MESSAGE_TIMEOUT_MS = 20_000;
 
   // ======================
   // Anti-spam / Quarantine (Front-only)
-  // 3 successful sends in 10 min => 1 hour quarantine
+  // 3 successful sends in 10 minutes => quarantine for 1 hour
   // ======================
   const LS_SENDS = "asanrooz_contact_sends_v1";
   const LS_QUAR = "asanrooz_contact_quarantine_until_v1";
@@ -26,13 +31,16 @@
   // Helpers
   // ======================
   const now = () => Date.now();
+  const log = (...args) => console.log("[asanrooz]", ...args);
 
   function normalizeSpaces(s) {
     return String(s || "").replace(/\s+/g, " ").trim();
   }
+
   function onlyPersianChars(name) {
     return /^[\u0600-\u06FF\u200c\s]+$/.test(name);
   }
+
   function countPersianLetters(name) {
     return String(name || "").replace(/[\s\u200c]/g, "").length;
   }
@@ -83,60 +91,90 @@
     }
   }
 
-  function headerPick(headers, key) {
+  function withTimeout(promiseFn, ms, label) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(label || "TIMEOUT"), ms);
+
+    const wrapped = (async () => {
+      try {
+        return await promiseFn(controller.signal);
+      } finally {
+        clearTimeout(id);
+      }
+    })();
+
+    return { wrapped, controller };
+  }
+
+  function formatDetailsBlock(lines) {
+    const clean = (lines || []).filter(Boolean).map(String);
+    if (!clean.length) return "";
+    return `\n\n— جزئیات فنی —\n${clean.join("\n")}`;
+  }
+
+  function pickWorkerMessage(data) {
+    if (!data) return "";
+    return String(
+      data.message ||
+        data.error ||
+        (data.details && JSON.stringify(data.details)) ||
+        ""
+    ).trim();
+  }
+
+  function stringifyShort(obj, max = 800) {
     try {
-      return headers.get(key) || "";
+      const s = JSON.stringify(obj);
+      return s.length > max ? s.slice(0, max) + "…" : s;
     } catch (_) {
       return "";
     }
   }
 
-  async function fetchJson(url, payload, timeoutMs) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(new Error("TIMEOUT")), timeoutMs);
+  function collectClientMeta() {
+    const tz = (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      } catch (_) {
+        return "";
+      }
+    })();
 
-    let res, text, data;
+    const scr = `${window.screen?.width || 0}x${window.screen?.height || 0}`;
+    const vp = `${window.innerWidth || 0}x${window.innerHeight || 0}`;
+
+    const dm = navigator.deviceMemory ? String(navigator.deviceMemory) : "";
+    const hc = navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "";
+
+    let conn = "";
     try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: ctrl.signal,
-      });
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (c) {
+        conn = [
+          c.effectiveType ? `type=${c.effectiveType}` : "",
+          typeof c.downlink === "number" ? `downlink=${c.downlink}` : "",
+          typeof c.rtt === "number" ? `rtt=${c.rtt}` : "",
+          c.saveData ? `saveData=1` : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
+      }
+    } catch (_) {}
 
-      text = await res.text().catch(() => "");
-      data = safeJsonParse(text);
-
-      return {
-        ok: res.ok,
-        status: res.status,
-        url,
-        data,
-        text,
-        headers: {
-          cfRay: headerPick(res.headers, "cf-ray"),
-          server: headerPick(res.headers, "server"),
-          date: headerPick(res.headers, "date"),
-          contentType: headerPick(res.headers, "content-type"),
-        },
-      };
-    } catch (err) {
-      return {
-        ok: false,
-        status: 0,
-        url,
-        data: null,
-        text: "",
-        headers: {},
-        networkError: {
-          name: err?.name || "Error",
-          message: String(err?.message || err),
-          stack: String(err?.stack || ""),
-        },
-      };
-    } finally {
-      clearTimeout(t);
-    }
+    return {
+      page: String(location.href || ""),
+      referrer: String(document.referrer || ""),
+      userAgent: String(navigator.userAgent || ""),
+      language: String(navigator.language || ""),
+      platform: String(navigator.platform || ""),
+      timezone: tz,
+      screen: scr,
+      viewport: vp,
+      deviceMemory: dm,
+      hardwareConcurrency: hc,
+      connection: conn,
+      ts: new Date().toISOString(),
+    };
   }
 
   // ======================
@@ -230,7 +268,7 @@
   }
 
   // ======================
-  // Modal (your HTML modal)
+  // Modal (uses your HTML modal)
   // ======================
   const modal = document.getElementById("modal");
   const modalTitle = document.getElementById("modalTitle");
@@ -240,14 +278,17 @@
   let afterCloseFocusEl = null;
   let pendingAfterCloseAction = null;
 
-  function openModal(title, text, focusEl, afterClose) {
+  function openModal(title, text, focusEl, afterClose, detailsLines) {
+    const details = formatDetailsBlock(detailsLines);
+
     if (!modal || !modalTitle || !modalText || !modalOk) {
-      alert(`${title}\n\n${text}`);
+      alert(`${title}\n\n${text}${details ? "\n\n" + details : ""}`);
       return;
     }
 
     modalTitle.textContent = title || "پیام";
-    modalText.textContent = text || "";
+    modalText.textContent = String(text || "") + String(details || "");
+
     afterCloseFocusEl = focusEl || null;
     pendingAfterCloseAction = typeof afterClose === "function" ? afterClose : null;
 
@@ -257,19 +298,17 @@
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
-    try {
-      modalOk.focus({ preventScroll: true });
-    } catch (_) {
-      modalOk.focus();
-    }
+    modalOk.focus();
   }
 
   function closeModal() {
     if (!modal) return;
 
     modal.classList.add("is-closing");
+
     setTimeout(() => {
       modal.classList.remove("is-open", "is-closing");
+
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
 
@@ -278,15 +317,10 @@
         pendingAfterCloseAction = null;
         fn();
       } else if (afterCloseFocusEl && typeof afterCloseFocusEl.focus === "function") {
-        try {
-          afterCloseFocusEl.focus({ preventScroll: true });
-        } catch (_) {
-          afterCloseFocusEl.focus();
-        }
-        // روی همان بخش بمان
+        afterCloseFocusEl.focus({ preventScroll: true });
         if (contactSection) {
           try {
-            contactSection.scrollIntoView({ behavior: "auto", block: "start" });
+            contactSection.scrollIntoView({ behavior: "smooth", block: "start" });
           } catch (_) {}
         }
       }
@@ -297,9 +331,10 @@
 
   if (modalOk) modalOk.addEventListener("click", closeModal);
 
+  // ESC should not close (only OK)
   document.addEventListener("keydown", (e) => {
     if (modal && modal.classList.contains("is-open") && (e.key === "Escape" || e.key === "Esc")) {
-      e.preventDefault(); // فقط با تایید بسته شود
+      e.preventDefault();
     }
   });
 
@@ -348,6 +383,7 @@
       return false;
     }
 
+    // must be checked (token exists)
     const tok = captchaToken();
     if (!tok) {
       openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null);
@@ -358,60 +394,121 @@
   }
 
   // ======================
-  // Error formatting (FULL DEBUG)
+  // Network calls
   // ======================
-  function stringifyShort(obj) {
-    try {
-      return JSON.stringify(obj, null, 2);
-    } catch (_) {
-      return String(obj);
-    }
+  async function verifyCaptchaOnWorker(token) {
+    const requestFn = async (signal) => {
+      const res = await fetch(CAPTCHA_VERIFY_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          captchaToken: token,
+          source: "asanrooz-landing",
+          ts: new Date().toISOString(),
+        }),
+        signal,
+      });
+
+      const text = await res.text().catch(() => "");
+      const data = safeJsonParse(text);
+
+      if (!res.ok) {
+        const msg = pickWorkerMessage(data) || "CAPTCHA_VERIFY_FAILED";
+        const err = new Error(msg);
+        err.__http = { url: CAPTCHA_VERIFY_ENDPOINT, status: res.status, data, text };
+        throw err;
+      }
+
+      if (!data) {
+        const t = String(text || "").trim().toLowerCase();
+        const ok = t === "ok" || t === "true" || t === "valid";
+        return { ok, raw: text };
+      }
+
+      const ok =
+        data.ok === true ||
+        data.success === true ||
+        data.valid === true ||
+        data.human === true ||
+        data.allowed === true ||
+        data.pass === true;
+
+      return { ok, raw: data };
+    };
+
+    const { wrapped } = withTimeout(requestFn, CAPTCHA_TIMEOUT_MS, "CAPTCHA_TIMEOUT");
+    return await wrapped;
   }
 
-  function buildDebugText(prefixFa, r) {
-    // r: output of fetchJson
-    const parts = [];
-    parts.push(prefixFa);
+  async function sendMessageToBackend(payload) {
+    const requestFn = async (signal) => {
+      const res = await fetch(MESSAGE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      });
 
-    if (r?.networkError) {
-      parts.push("\n— جزئیات فنی —");
-      parts.push(`NetworkError: ${r.networkError.name}: ${r.networkError.message}`);
-      return parts.join("\n");
-    }
+      const text = await res.text().catch(() => "");
+      const data = safeJsonParse(text);
 
-    parts.push("\n— جزئیات فنی —");
-    parts.push(`URL: ${r?.url || "—"}`);
-    parts.push(`HTTP: ${r?.status ?? "—"}`);
-    if (r?.headers?.cfRay) parts.push(`CF-RAY: ${r.headers.cfRay}`);
+      if (!res.ok) {
+        const msg = pickWorkerMessage(data) || "MESSAGE_SEND_FAILED";
+        const err = new Error(msg);
+        err.__http = { url: MESSAGE_ENDPOINT, status: res.status, data, text };
+        throw err;
+      }
 
-    const data = r?.data;
-    if (data && typeof data === "object") {
-      if (data.error) parts.push(`error: ${data.error}`);
-      if (data.message) parts.push(`message: ${data.message}`);
-      if (data.details) parts.push(`details: ${stringifyShort(data.details)}`);
-    } else if (r?.text) {
-      parts.push(`raw: ${r.text.slice(0, 800)}`);
-    } else {
-      parts.push("raw: (empty)");
-    }
+      if (data) {
+        const ok =
+          data.ok === true ||
+          data.success === true ||
+          data.status === "ok" ||
+          data.status === "success";
+        if (!ok) {
+          const msg = pickWorkerMessage(data) || "MESSAGE_SEND_FAILED";
+          const err = new Error(msg);
+          err.__http = { url: MESSAGE_ENDPOINT, status: res.status, data, text };
+          throw err;
+        }
+        return data;
+      }
 
-    return parts.join("\n");
+      // 200 with non-JSON => assume success
+      return { ok: true, raw: text };
+    };
+
+    const { wrapped } = withTimeout(requestFn, MESSAGE_TIMEOUT_MS, "MESSAGE_TIMEOUT");
+    return await wrapped;
   }
 
-  function isCaptchaFailure(data) {
-    const err = String(data?.error || "");
-    if (err.includes("captcha")) return true;
-    // گوگل v2 معمولاً error-codes می‌دهد:
-    const codes = data?.details?.["error-codes"];
-    if (Array.isArray(codes) && codes.length) return true;
-    return false;
-  }
+  function buildTechLinesFromError(err) {
+    const lines = [];
+    if (!err) return lines;
 
-  // ======================
-  // Send (ONLY ONE REQUEST)
-  // ======================
-  async function sendMessageToWorker(payload) {
-    return await fetchJson(MESSAGE_ENDPOINT, payload, MESSAGE_TIMEOUT_MS);
+    const name = err.name ? String(err.name) : "Error";
+    const msg = err.message ? String(err.message) : "";
+    lines.push(`${name}: ${msg}`);
+
+    // Abort timeout
+    if (String(msg).includes("TIMEOUT") || err.name === "AbortError") {
+      lines.push("Reason: timeout/abort");
+    }
+
+    const http = err.__http;
+    if (http) {
+      lines.push(`URL: ${http.url}`);
+      lines.push(`HTTP Status: ${http.status}`);
+      if (http.data) lines.push(`Body(JSON): ${stringifyShort(http.data, 1200)}`);
+      else if (http.text) lines.push(`Body(Text): ${String(http.text).slice(0, 1200)}${String(http.text).length > 1200 ? "…" : ""}`);
+    }
+
+    // Chrome fetch CORS errors typically appear as TypeError: Failed to fetch
+    if (msg === "Failed to fetch") {
+      lines.push("Hint: ممکن است مشکل CORS/Network باشد.");
+    }
+
+    return lines;
   }
 
   // ======================
@@ -420,67 +517,109 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // روی همان بخش بمان
+    // stay at contact section
     if (contactSection) {
       try {
         contactSection.scrollIntoView({ behavior: "auto", block: "start" });
       } catch (_) {}
     }
 
-    // قرنطینه؟
+    // quarantine
     if (isQuarantined()) {
       openModal("خطا", quarantineMessage(minutesLeft(getQuarantineUntil())), null);
       return;
     }
 
-    // Validation
+    // local validation + captcha checked
     if (!validateInputsOnly()) return;
 
     const prevDisabled = sendBtn?.disabled;
     if (sendBtn) sendBtn.disabled = true;
 
-    const token = captchaToken();
+    // debug logging
+    log("Worker base:", WORKER_BASE);
+    log("captcha endpoint:", CAPTCHA_VERIFY_ENDPOINT);
+    log("message endpoint:", MESSAGE_ENDPOINT);
 
     try {
-      const payload = {
-        name: normalizeSpaces(nameEl.value),
-        email: String(emailEl.value || "").trim(),
-        message: String(msgEl.value || "").trim(),
-        captchaToken: token,
-        page: location.href,
-        source: "asanrooz-landing",
-        userAgent: navigator.userAgent || "",
-        ts: new Date().toISOString(),
-      };
+      const token = captchaToken();
 
-      const sendRes = await sendMessageToWorker(payload);
-
-      // DEBUG log
-      console.log("[asanrooz][contact] response:", sendRes);
-
-      // Fail?
-      if (!sendRes.ok || !(sendRes.data && (sendRes.data.success === true || sendRes.data.ok === true))) {
-        // اگر خطا مربوط به کپچا بود، ریست کنیم تا دوباره تیک بزند
-        if (isCaptchaFailure(sendRes.data)) resetCaptcha();
-
-        // پیام کاربرپسند + جزئیات کامل
-        const userMsg =
-          sendRes?.data?.message ||
-          (sendRes?.networkError ? "خطای شبکه یا تایم‌اوت رخ داد." : "پاسخ نامعتبر از سرور دریافت شد.");
-
-        openModal("خطا", buildDebugText(userMsg, sendRes), null);
+      // 1) Verify captcha (step-1)
+      let verifyResult;
+      try {
+        verifyResult = await verifyCaptchaOnWorker(token);
+        log("captcha verify result:", verifyResult);
+      } catch (err) {
+        log("captcha verify error:", err);
+        openModal(
+          "خطا",
+          "در بررسی کپچا مشکلی رخ داد! لطفاً دوباره تلاش کنید.",
+          null,
+          null,
+          buildTechLinesFromError(err)
+        );
         return;
       }
 
-      // ✅ success
+      if (!verifyResult || verifyResult.ok !== true) {
+        openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null, null, [
+          "captcha check returned not-ok",
+          `raw: ${stringifyShort(verifyResult, 800)}`,
+        ]);
+        return;
+      }
+
+      // 2) Send full message (step-2)
+      const meta = collectClientMeta();
+
+      const payload = {
+        name: normalizeSpaces(nameEl.value),
+        email: String(emailEl.value || "").trim(),
+        message: String(msgEl.value || ""),
+        captchaToken: token,
+
+        // meta
+        page: meta.page,
+        referrer: meta.referrer,
+        userAgent: meta.userAgent,
+        language: meta.language,
+        platform: meta.platform,
+        timezone: meta.timezone,
+        screen: meta.screen,
+        viewport: meta.viewport,
+        deviceMemory: meta.deviceMemory,
+        hardwareConcurrency: meta.hardwareConcurrency,
+        connection: meta.connection,
+        ts: meta.ts,
+
+        // optional tag
+        source: "asanrooz-landing",
+      };
+
+      try {
+        const resp = await sendMessageToBackend(payload);
+        log("contact send response:", resp);
+      } catch (err) {
+        log("contact send error:", err);
+        openModal(
+          "خطا",
+          "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
+          null,
+          null,
+          buildTechLinesFromError(err)
+        );
+        return;
+      }
+
+      // success -> register front quarantine
       registerSuccessfulSend();
 
+      // success modal: after OK => reset + scroll top
       openModal(
         "توجه",
         "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
         null,
         () => {
-          // فقط در موفقیت ریست شود
           form.reset();
           resetCaptcha();
           try {
@@ -490,15 +629,8 @@
           }
         }
       );
-    } catch (err) {
-      // خطای غیرمنتظره
-      const msg = String(err?.message || err);
-      openModal("خطا", `خطای غیرمنتظره رخ داد:\n${msg}`, null);
     } finally {
       if (sendBtn) sendBtn.disabled = prevDisabled || false;
     }
   });
-
-  console.info("[asanrooz] Worker base:", WORKER_BASE);
-  console.info("[asanrooz] message endpoint:", MESSAGE_ENDPOINT);
 })();
