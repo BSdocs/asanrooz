@@ -8,14 +8,11 @@
     window.ASANROOZ_WORKER_BASE ||
     "https://asanrooz-check-captcha.mr-rahimi-kiasari.workers.dev";
 
-  // endpoints
-  const CAPTCHA_VERIFY_ENDPOINT =
-    window.ASANROOZ_CAPTCHA_VERIFY_ENDPOINT || `${WORKER_BASE}/api/check-captcha`;
+  // ✅ فقط همین Endpoint استفاده می‌شود (توکن کپچا فقط یک‌بار مصرف است)
   const MESSAGE_ENDPOINT =
     window.ASANROOZ_MESSAGE_ENDPOINT || `${WORKER_BASE}/api/contact`;
 
   // timeouts
-  const CAPTCHA_TIMEOUT_MS = 12_000;
   const MESSAGE_TIMEOUT_MS = 20_000;
 
   // ======================
@@ -114,12 +111,7 @@
 
   function pickWorkerMessage(data) {
     if (!data) return "";
-    return String(
-      data.message ||
-        data.error ||
-        (data.details && JSON.stringify(data.details)) ||
-        ""
-    ).trim();
+    return String(data.message || data.error || "").trim();
   }
 
   function stringifyShort(obj, max = 800) {
@@ -268,6 +260,32 @@
   }
 
   // ======================
+  // ✅ Message counter (INSERTED)
+  // ======================
+  if (msgEl) {
+    const counter = document.createElement("div");
+    counter.id = "msgCounter";
+    counter.style.cssText = `
+      margin-top: 8px;
+      font-size: .9rem;
+      line-height: 1.6;
+      text-align: left;
+      direction: ltr;
+      user-select: none;
+    `;
+    // تلاش می‌کنیم شمارنده زیر textarea قرار بگیرد
+    msgEl.insertAdjacentElement("afterend", counter);
+
+    function updateCounter() {
+      const len = (msgEl.value || "").length;
+      counter.textContent = `${len} / 30`;
+      counter.style.color = len < 30 ? "#F7941D" : "#1758C8";
+    }
+    msgEl.addEventListener("input", updateCounter);
+    updateCounter();
+  }
+
+  // ======================
   // Modal (uses your HTML modal)
   // ======================
   const modal = document.getElementById("modal");
@@ -287,6 +305,7 @@
     }
 
     modalTitle.textContent = title || "پیام";
+    // فعلاً دیباگ رو دست نمی‌زنیم (طبق خواسته‌ات)
     modalText.textContent = String(text || "") + String(details || "");
 
     afterCloseFocusEl = focusEl || null;
@@ -396,50 +415,6 @@
   // ======================
   // Network calls
   // ======================
-  async function verifyCaptchaOnWorker(token) {
-    const requestFn = async (signal) => {
-      const res = await fetch(CAPTCHA_VERIFY_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          captchaToken: token,
-          source: "asanrooz-landing",
-          ts: new Date().toISOString(),
-        }),
-        signal,
-      });
-
-      const text = await res.text().catch(() => "");
-      const data = safeJsonParse(text);
-
-      if (!res.ok) {
-        const msg = pickWorkerMessage(data) || "CAPTCHA_VERIFY_FAILED";
-        const err = new Error(msg);
-        err.__http = { url: CAPTCHA_VERIFY_ENDPOINT, status: res.status, data, text };
-        throw err;
-      }
-
-      if (!data) {
-        const t = String(text || "").trim().toLowerCase();
-        const ok = t === "ok" || t === "true" || t === "valid";
-        return { ok, raw: text };
-      }
-
-      const ok =
-        data.ok === true ||
-        data.success === true ||
-        data.valid === true ||
-        data.human === true ||
-        data.allowed === true ||
-        data.pass === true;
-
-      return { ok, raw: data };
-    };
-
-    const { wrapped } = withTimeout(requestFn, CAPTCHA_TIMEOUT_MS, "CAPTCHA_TIMEOUT");
-    return await wrapped;
-  }
-
   async function sendMessageToBackend(payload) {
     const requestFn = async (signal) => {
       const res = await fetch(MESSAGE_ENDPOINT, {
@@ -490,7 +465,6 @@
     const msg = err.message ? String(err.message) : "";
     lines.push(`${name}: ${msg}`);
 
-    // Abort timeout
     if (String(msg).includes("TIMEOUT") || err.name === "AbortError") {
       lines.push("Reason: timeout/abort");
     }
@@ -500,10 +474,14 @@
       lines.push(`URL: ${http.url}`);
       lines.push(`HTTP Status: ${http.status}`);
       if (http.data) lines.push(`Body(JSON): ${stringifyShort(http.data, 1200)}`);
-      else if (http.text) lines.push(`Body(Text): ${String(http.text).slice(0, 1200)}${String(http.text).length > 1200 ? "…" : ""}`);
+      else if (http.text)
+        lines.push(
+          `Body(Text): ${String(http.text).slice(0, 1200)}${
+            String(http.text).length > 1200 ? "…" : ""
+          }`
+        );
     }
 
-    // Chrome fetch CORS errors typically appear as TypeError: Failed to fetch
     if (msg === "Failed to fetch") {
       lines.push("Hint: ممکن است مشکل CORS/Network باشد.");
     }
@@ -538,38 +516,12 @@
 
     // debug logging
     log("Worker base:", WORKER_BASE);
-    log("captcha endpoint:", CAPTCHA_VERIFY_ENDPOINT);
     log("message endpoint:", MESSAGE_ENDPOINT);
 
     try {
       const token = captchaToken();
 
-      // 1) Verify captcha (step-1)
-      let verifyResult;
-      try {
-        verifyResult = await verifyCaptchaOnWorker(token);
-        log("captcha verify result:", verifyResult);
-      } catch (err) {
-        log("captcha verify error:", err);
-        openModal(
-          "خطا",
-          "در بررسی کپچا مشکلی رخ داد! لطفاً دوباره تلاش کنید.",
-          null,
-          null,
-          buildTechLinesFromError(err)
-        );
-        return;
-      }
-
-      if (!verifyResult || verifyResult.ok !== true) {
-        openModal("خطا", "لطفا تایید کنید که ربات نیستید!", null, null, [
-          "captcha check returned not-ok",
-          `raw: ${stringifyShort(verifyResult, 800)}`,
-        ]);
-        return;
-      }
-
-      // 2) Send full message (step-2)
+      // ✅ فقط یک درخواست: مستقیم به /api/contact
       const meta = collectClientMeta();
 
       const payload = {
@@ -592,7 +544,6 @@
         connection: meta.connection,
         ts: meta.ts,
 
-        // optional tag
         source: "asanrooz-landing",
       };
 
@@ -601,6 +552,16 @@
         log("contact send response:", resp);
       } catch (err) {
         log("contact send error:", err);
+
+        // اگر خطا از کپچا بود، ریستش کن تا کاربر دوباره تیک بزنه
+        const http = err && err.__http;
+        const data = http && http.data;
+        const isCaptchaFail =
+          (data && (data.error === "captcha_failed" || data.error === "missing_captcha")) ||
+          String(err?.message || "").includes("captcha");
+
+        if (isCaptchaFail) resetCaptcha();
+
         openModal(
           "خطا",
           "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
