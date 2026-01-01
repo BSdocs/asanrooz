@@ -452,7 +452,7 @@ section.contact{
 }
 .site-footer{
   width: var(--frameW);
-  margin-top: -14px;
+  margin-top: 18px;
   padding: 10px 0 0;
 }
 
@@ -466,8 +466,8 @@ section.contact{
   user-select: none;
 }
 
-/* لینک مجوز – دقیقاً مثل سایر لینک‌های سایت */
 .copyright .license-link{
+  color: #1758C8;          /* دقیقاً مثل ارتباط با ما */
   text-decoration: none;
   cursor: pointer;
 }
