@@ -452,7 +452,7 @@ section.contact{
 }
 .site-footer{
   width: var(--frameW);
-  margin-top: 18px;
+  margin-top: -14px;
   padding: 10px 0 0;
 }
 
