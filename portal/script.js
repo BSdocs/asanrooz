@@ -86,10 +86,7 @@
 
   function captchaToken() {
     try {
-      if (
-        window.grecaptcha &&
-        typeof window.grecaptcha.getResponse === "function"
-      ) {
+      if (window.grecaptcha && typeof window.grecaptcha.getResponse === "function") {
         return String(window.grecaptcha.getResponse() || "");
       }
     } catch (_) {}
@@ -140,14 +137,11 @@
     const vp = `${window.innerWidth || 0}x${window.innerHeight || 0}`;
 
     const dm = navigator.deviceMemory ? String(navigator.deviceMemory) : "";
-    const hc = navigator.hardwareConcurrency
-      ? String(navigator.hardwareConcurrency)
-      : "";
+    const hc = navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "";
 
     let conn = "";
     try {
-      const c =
-        navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (c) {
         conn = [
           c.effectiveType ? `type=${c.effectiveType}` : "",
@@ -183,9 +177,7 @@
     try {
       const raw = localStorage.getItem(LS_SENDS);
       const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr)
-        ? arr.filter((n) => typeof n === "number")
-        : [];
+      return Array.isArray(arr) ? arr.filter((n) => typeof n === "number") : [];
     } catch (_) {
       return [];
     }
@@ -231,7 +223,7 @@
 
   function registerSuccessfulSend() {
     const t = now();
-    const sends = getSends().filter((x) => t - x <= 2 * ONE_HOUR);
+    let sends = getSends().filter((x) => t - x <= 2 * ONE_HOUR);
     sends.push(t);
     setSends(sends);
 
@@ -243,12 +235,8 @@
   // ✅ “Soft” anti-devtools (NOT secure, but reduces casual access)
   // ======================
   (function softLockDevtools() {
-    // 1) Disable context menu
-    document.addEventListener(
-      "contextmenu",
-      (e) => e.preventDefault(),
-      { capture: true }
-    );
+    // 1) Disable context menu (you already wanted this)
+    document.addEventListener("contextmenu", (e) => e.preventDefault(), { capture: true });
 
     // 2) Block common shortcuts (still bypassable)
     document.addEventListener(
@@ -257,7 +245,7 @@
         const k = (e.key || "").toLowerCase();
         const ctrl = e.ctrlKey || e.metaKey;
 
-        // F12, Ctrl+Shift+I/J/C/K, Ctrl+U
+        // F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+Shift+K
         if (
           k === "f12" ||
           (ctrl && e.shiftKey && (k === "i" || k === "j" || k === "c" || k === "k")) ||
@@ -272,7 +260,7 @@
       true
     );
 
-    // 3) Silence console (still bypassable)
+    // 3) Silence console (reduce accidental leaks; still bypassable)
     try {
       const noop = () => {};
       if (!window.__ASANROOZ_ALLOW_CONSOLE__) {
@@ -403,11 +391,7 @@
 
   // Escape را بی‌اثر می‌کنیم (طبق خواسته قبلی)
   document.addEventListener("keydown", (e) => {
-    if (
-      modal &&
-      modal.classList.contains("is-open") &&
-      (e.key === "Escape" || e.key === "Esc")
-    ) {
+    if (modal && modal.classList.contains("is-open") && (e.key === "Escape" || e.key === "Esc")) {
       e.preventDefault();
     }
   });
@@ -426,16 +410,13 @@
     if (countPersianLetters(name) < 3) return (openModal("خطا", MSG.NAME_MIN, nameEl), false);
 
     if (!email) return (openModal("خطا", MSG.EMAIL_REQUIRED, emailEl), false);
-    if (!isValidEmailByRules(email))
-      return (openModal("خطا", MSG.EMAIL_INVALID, emailEl), false);
+    if (!isValidEmailByRules(email)) return (openModal("خطا", MSG.EMAIL_INVALID, emailEl), false);
 
     if (!messageTrim) return (openModal("خطا", MSG.MESSAGE_REQUIRED, msgEl), false);
-    if (messageTrim.length < 30)
-      return (openModal("خطا", MSG.MESSAGE_MIN, msgEl), false);
+    if (messageTrim.length < 30) return (openModal("خطا", MSG.MESSAGE_MIN, msgEl), false);
 
     const messageNoWhitespace = messageRaw.replace(/\s+/g, "");
-    if (messageNoWhitespace.length === 0)
-      return (openModal("خطا", MSG.MESSAGE_SPAM, msgEl), false);
+    if (messageNoWhitespace.length === 0) return (openModal("خطا", MSG.MESSAGE_SPAM, msgEl), false);
 
     const tok = captchaToken();
     if (!tok) return (openModal("خطا", MSG.CAPTCHA_REQUIRED, null), false);
@@ -447,7 +428,7 @@
   // Network calls (NO debug to user)
   // ======================
   function isLikelyCaptchaErrorFromServer(data) {
-    const err = data && (data.error || data.code) ? String(data.error || data.code) : "";
+    const err = (data && (data.error || data.code)) ? String(data.error || data.code) : "";
     return err === "captcha_failed" || err === "missing_captcha";
   }
 
