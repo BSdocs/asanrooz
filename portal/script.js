@@ -20,7 +20,8 @@
     MESSAGE_MIN: "متن پیام باید حداقل ۳۰ کاراکتر باشد.",
     MESSAGE_SPAM: "لطفا پیام خود را بصورت صحیح بنویسید.",
     CAPTCHA_REQUIRED: "لطفا تایید کنید که ربات نیستید!",
-    SEND_FAILED: "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
+    SEND_FAILED:
+      "مشکلی در روند ارسال پیام رخ داد! لطفا بعدا دوباره امتحان کنید.",
     SUCCESS_TITLE: "توجه",
     SUCCESS_TEXT:
       "پیام شما را دریافت کردیم و به زودی از طریق ایمیل ثبت شده به آن پاسخ خواهیم داد.",
@@ -46,13 +47,19 @@
     if (domain.indexOf(".") === -1) return false;
     if (domain.startsWith(".") || domain.endsWith(".")) return false;
     const domLower = domain.toLowerCase();
-    if (domLower === "codbanoo.ir" || domLower.endsWith(".codbanoo.ir")) return false;
-    if (domLower === "asanrooz.ir" || domLower.endsWith(".asanrooz.ir")) return false;
+    if (domLower === "codbanoo.ir" || domLower.endsWith(".codbanoo.ir"))
+      return false;
+    if (domLower === "asanrooz.ir" || domLower.endsWith(".asanrooz.ir"))
+      return false;
+
     return true;
   }
   function captchaToken() {
     try {
-      if (window.grecaptcha && typeof window.grecaptcha.getResponse === "function") {
+      if (
+        window.grecaptcha &&
+        typeof window.grecaptcha.getResponse === "function"
+      ) {
         return String(window.grecaptcha.getResponse() || "");
       }
     } catch (_) {}
@@ -75,7 +82,6 @@
   function withTimeout(promiseFn, ms) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), ms);
-
     const wrapped = (async () => {
       try {
         return await promiseFn(controller.signal);
@@ -96,10 +102,13 @@
     const scr = `${window.screen?.width || 0}x${window.screen?.height || 0}`;
     const vp = `${window.innerWidth || 0}x${window.innerHeight || 0}`;
     const dm = navigator.deviceMemory ? String(navigator.deviceMemory) : "";
-    const hc = navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : "";
+    const hc = navigator.hardwareConcurrency
+      ? String(navigator.hardwareConcurrency)
+      : "";
     let conn = "";
     try {
-      const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const c =
+        navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (c) {
         conn = [
           c.effectiveType ? `type=${c.effectiveType}` : "",
@@ -172,12 +181,13 @@
     let sends = getSends().filter((x) => t - x <= 2 * ONE_HOUR);
     sends.push(t);
     setSends(sends);
-
     const last10 = sends.filter((x) => t - x <= TEN_MIN);
     if (last10.length >= 3) setQuarantineUntil(t + ONE_HOUR);
   }
   (function softLockDevtools() {
-    document.addEventListener("contextmenu", (e) => e.preventDefault(), { capture: true });
+    document.addEventListener("contextmenu", (e) => e.preventDefault(), {
+      capture: true,
+    });
     document.addEventListener(
       "keydown",
       (e) => {
@@ -292,7 +302,11 @@
   }
   if (modalOk) modalOk.addEventListener("click", closeModal);
   document.addEventListener("keydown", (e) => {
-    if (modal && modal.classList.contains("is-open") && (e.key === "Escape" || e.key === "Esc")) {
+    if (
+      modal &&
+      modal.classList.contains("is-open") &&
+      (e.key === "Escape" || e.key === "Esc")
+    ) {
       e.preventDefault();
     }
   });
@@ -309,13 +323,14 @@
     if (!messageTrim) return (openModal("خطا", MSG.MESSAGE_REQUIRED, msgEl), false);
     if (messageTrim.length < 30) return (openModal("خطا", MSG.MESSAGE_MIN, msgEl), false);
     const messageNoWhitespace = messageRaw.replace(/\s+/g, "");
-    if (messageNoWhitespace.length === 0) return (openModal("خطا", MSG.MESSAGE_SPAM, msgEl), false);
+    if (messageNoWhitespace.length === 0)
+      return (openModal("خطا", MSG.MESSAGE_SPAM, msgEl), false);
     const tok = captchaToken();
     if (!tok) return (openModal("خطا", MSG.CAPTCHA_REQUIRED, null), false);
     return true;
   }
   function isLikelyCaptchaErrorFromServer(data) {
-    const err = (data && (data.error || data.code)) ? String(data.error || data.code) : "";
+    const err = data && (data.error || data.code) ? String(data.error || data.code) : "";
     return err === "captcha_failed" || err === "missing_captcha";
   }
   async function sendMessageToBackend(payload) {
@@ -330,11 +345,9 @@
       const data = safeJsonParse(text);
       if (res.ok) {
         if (data && (data.success === true || data.ok === true)) return { ok: true, data };
-        if (!data) return { ok: true, data: null }; // some servers may return empty body with 200
+        if (!data) return { ok: true, data: null };
       }
-      if (data && isLikelyCaptchaErrorFromServer(data)) {
-        resetCaptcha();
-      }
+      if (data && isLikelyCaptchaErrorFromServer(data)) resetCaptcha();
       const err = new Error("SEND_FAILED");
       err.__server = data || null;
       err.__status = res.status || 0;
@@ -382,7 +395,6 @@
       try {
         await sendMessageToBackend(payload);
       } catch (_) {
-        // ONLY generic message to user
         openModal("خطا", MSG.SEND_FAILED, null);
         return;
       }
@@ -405,4 +417,108 @@
       if (sendBtn) sendBtn.disabled = prevDisabled;
     }
   });
+})();
+(() => {
+  "use strict";
+  try { document.documentElement.classList.add("js"); } catch (_) {}
+  const prefersReducedMotion = (() => {
+    try {
+      return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (_) { return false; }
+  })();
+  const $ = (sel) => document.querySelector(sel);
+  const brandFrame = $("#brandFrame") || $(".brand-frame");
+  const notice = $("section.notice");
+  const contact = $("section.contact");
+  const copyright = $(".copyright");
+  const desc = $("section.notice .desc");
+  function makeReveal(el, effect) {
+    if (!el) return;
+    el.classList.add("reveal");
+    try { el.dataset.effect = effect; } catch (_) {}
+  }
+  makeReveal(brandFrame, "zoom-out");
+  makeReveal(notice, "fade-up");
+  makeReveal(contact, "fade-up");
+  makeReveal(copyright, "slide-right");
+  let typingStarted = false;
+  const descFullText = desc ? (desc.textContent || "").trim() : "";
+  if (desc && descFullText) desc.textContent = "";
+  function startTypewriter() {
+    if (!desc || !descFullText || typingStarted) return;
+    typingStarted = true;
+    desc.classList.add("is-typing");
+    const text = descFullText;
+    let i = 0;
+    const base = 52;
+    const jitter = 38;
+    const punct = 170;
+    const tick = () => {
+      i += 1;
+      desc.textContent = text.slice(0, i);
+      if (i >= text.length) {
+        desc.classList.remove("is-typing");
+        return;
+      }
+      const ch = text[i - 1];
+      const extra = ("،.!؟".includes(ch)) ? punct : 0;
+      const delay = base + Math.floor(Math.random() * jitter) + extra;
+      setTimeout(tick, delay);
+    };
+    setTimeout(tick, 220);
+  }
+  if (prefersReducedMotion) {
+    [brandFrame, notice, contact, copyright].filter(Boolean).forEach((el) => {
+      el.classList.add("is-inview");
+    });
+    if (desc && descFullText) desc.textContent = descFullText;
+    return;
+  }
+  const targets = [brandFrame, notice, contact, copyright].filter(Boolean);
+  const isScrollable = () =>
+    (document.documentElement.scrollHeight > (window.innerHeight + 4));
+
+  function reveal(el) {
+    if (!el) return;
+    el.classList.add("is-inview");
+  }
+  function scrollFallback() {
+    if (!copyright || copyright.classList.contains("is-inview")) return;
+    const r = copyright.getBoundingClientRect();
+    if (r.top < window.innerHeight - 40) {
+      reveal(copyright);
+      window.removeEventListener("scroll", scrollFallback, { passive: true });
+    }
+  }
+  if (typeof IntersectionObserver !== "function") {
+    targets.forEach(reveal);
+    startTypewriter();
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries, obs) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const el = entry.target;
+        reveal(el);
+        obs.unobserve(el);
+        if (el === notice) startTypewriter();
+      }
+    },
+    {
+      root: null,
+      threshold: 0.01,
+      rootMargin: "0px 0px 120px 0px"
+    }
+  );
+  targets.forEach((el) => io.observe(el));
+  if (!isScrollable()) {
+    targets.forEach(reveal);
+    startTypewriter();
+    return;
+  }
+  if (copyright) {
+    window.addEventListener("scroll", scrollFallback, { passive: true });
+    scrollFallback();
+  }
 })();
