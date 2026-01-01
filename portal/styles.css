@@ -450,3 +450,28 @@ section.contact{
   color: rgba(15,23,42,.55);
   user-select: none;
 }
+.site-footer{
+  width: var(--frameW);
+  margin-top: -14px;
+  padding: 10px 0 0;
+}
+
+.copyright{
+  direction: ltr;
+  text-align: left;
+  font-family: "Samim","IRANSans",system-ui,sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: rgba(15,23,42,.55);
+  user-select: none;
+}
+
+/* لینک مجوز – دقیقاً مثل سایر لینک‌های سایت */
+.copyright .license-link{
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.copyright .license-link:hover{
+  text-decoration: underline;
+}
