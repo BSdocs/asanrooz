@@ -3,65 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>آسان‌روز</title>
-
-  <!-- ======================
-       Favicons
-  ====================== -->
+  <title>آسان‌روز | پلتفرم خدمات آنلاین</title>
   <link rel="icon" href="./pics/favicons/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="./pics/favicons/icon.svg">
   <link rel="apple-touch-icon" href="./pics/favicons/apple-touch-icon.png">
   <link rel="manifest" href="./pics/favicons/site.webmanifest">
-
-  <!-- Google Material Symbols Rounded -->
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@1&display=swap"
     rel="stylesheet"
   />
-
-  <!-- Main CSS -->
   <link rel="stylesheet" href="./styles.css" />
 </head>
-
 <body>
 <main class="wrap">
-
-  <!-- ======================
-       Brand (clickable)
-  ====================== -->
   <a
     class="brand-link"
-    href="https://codbanoo.ir/"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Open codbanoo.ir"
+    href="https://asanrooz.ir/"
+    aria-label="Opening asanrooz website address"
   >
     <div class="brand-frame" id="brandFrame">
       <div class="brand-lockup">
-        <img class="logo" src="./icon.svg" alt="Asanrooz logo">
-        <img class="brand" src="./brand.svg" alt="Brand">
+        <img class="logo" src="./pics/root/icon.svg" alt="Asanrooz logo">
+        <img class="brand" src="./pics/root/brand.svg" alt="Brand">
       </div>
     </div>
   </a>
-
-  <!-- ======================
-       Notice
-  ====================== -->
   <section class="notice">
     <div class="pill">
       <span class="mi" aria-hidden="true">build</span>
       <span>در حال بروزرسانی زیرساخت</span>
     </div>
-
     <h1>برای بهتر شدن، موقتاً در دسترس نیستیم.</h1>
-
     <p class="desc">
       ما در آسان‌روز روی بروزرسانی زیرساخت و آماده‌سازی ابزارهای جدید کار می‌کنیم
       تا تجربه‌ای سریع‌تر و پایدارتر ارائه کنیم.
     </p>
-
     <div class="divider"></div>
-
     <div class="bottom">
       <div class="loading">
         در حال آماده‌سازی
@@ -71,21 +48,15 @@
           <span class="dot"></span>
         </span>
       </div>
-
       <p class="help">
         اگر کار فوری دارید، از بخش
-        <a href="#contact" id="contactLink">تماس با ما</a>
+        <a href="#contact" id="contactLink">ارتباط با ما</a>
         پیام بدهید.
       </p>
     </div>
   </section>
-
-  <!-- ======================
-       Contact
-  ====================== -->
   <section id="contact" class="contact" aria-label="تماس با ما">
-    <h2>تماس با ما</h2>
-
+    <h2>ارتباط با ما</h2>
     <form id="contactForm" method="post" novalidate>
       <div class="form-grid">
         <div class="field">
@@ -98,7 +69,6 @@
             autocomplete="name"
           />
         </div>
-
         <div class="field">
           <label for="email">ایمیل</label>
           <input
@@ -109,7 +79,6 @@
             autocomplete="email"
           />
         </div>
-
         <div class="field message">
           <label for="message">پیام</label>
           <textarea
@@ -119,7 +88,6 @@
           ></textarea>
         </div>
       </div>
-
       <div class="actions-row">
         <div class="captcha-normal">
           <div class="captcha-box">
@@ -129,7 +97,6 @@
             ></div>
           </div>
         </div>
-
         <button id="sendBtn" type="submit" class="btn">
           <span class="btn-text">ارسال پیام</span>
           <span class="mi" aria-hidden="true">send</span>
@@ -137,12 +104,7 @@
       </div>
     </form>
   </section>
-
 </main>
-
-<!-- ======================
-     Modal
-====================== -->
 <div
   class="modal"
   id="modal"
@@ -151,22 +113,15 @@
   aria-labelledby="modalTitle"
 >
   <div class="modal-backdrop" aria-hidden="true"></div>
-
   <div class="modal-card" role="document">
     <h3 class="modal-title" id="modalTitle">پیام</h3>
     <p class="modal-text" id="modalText"></p>
-
     <div class="modal-actions">
       <button type="button" class="modal-ok" id="modalOk">تایید</button>
     </div>
   </div>
 </div>
-
-<!-- ======================
-     Scripts
-====================== -->
 <script src="https://www.google.com/recaptcha/api.js?hl=fa" async defer></script>
 <script src="./script.js"></script>
-
 </body>
 </html>
