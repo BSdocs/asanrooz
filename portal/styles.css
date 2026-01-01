@@ -450,28 +450,62 @@ section.contact{
   color: rgba(15,23,42,.55);
   user-select: none;
 }
-.site-footer{
-  width: var(--frameW);
-  margin-top: -14px;
-  padding: 10px 0 0;
-}
-
-.copyright{
-  direction: ltr;
-  text-align: left;
-  font-family: "Samim","IRANSans",system-ui,sans-serif;
-  font-weight: 800;
-  font-size: 13px;
-  color: rgba(15,23,42,.55);
-  user-select: none;
-}
-
 .copyright .license-link{
-  color: #1758C8;          /* دقیقاً مثل ارتباط با ما */
+  color: #1758C8;
   text-decoration: none;
   cursor: pointer;
 }
-
 .copyright .license-link:hover{
   text-decoration: underline;
 }
+.js .reveal{
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.js .reveal[data-effect="fade-up"]{
+  transform: translateY(18px);
+}
+.js .reveal[data-effect="zoom-out"]{
+  transform: scale(1.07);
+}
+.js .reveal[data-effect="slide-right"]{
+  transform: translateX(28px);
+}
+.js .reveal.is-inview{
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 720ms ease,
+    transform 720ms cubic-bezier(.2,.9,.2,1);
+}
+.notice p.desc.is-typing{
+  position: relative;
+}
+.notice p.desc.is-typing::after{
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 1.1em;
+  margin-inline-start: 2px;
+  border-inline-end: 2px solid rgba(15,23,42,.55);
+  transform: translateY(2px);
+  animation: caretBlink 900ms steps(2, end) infinite;
+}
+@keyframes caretBlink{
+  0%, 49%{ opacity: 1; }
+  50%, 100%{ opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .js .reveal,
+  .js .reveal.is-inview{
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .notice p.desc.is-typing::after{
+    animation: none !important;
+  }
+}
+.copyright{ display:block; }
