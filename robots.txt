@@ -10,4 +10,4 @@ Disallow: /tmp/
 
 Disallow: /*?*
 
-Sitemap: https://codbanoo.ir/sitemap.xml
+Sitemap: https://asanrooz.ir/sitemap.xml
