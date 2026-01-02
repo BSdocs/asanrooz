@@ -30,23 +30,30 @@
 
   <script>
     function post(type, payload) {
+      // 1) ارسال پیام برای WebView2 (مثل قبل)
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage({ type, ...payload });
       }
+  
+      // 2) ارسال پیام برای صفحه والد (login.html)
+      try {
+        window.parent.postMessage({ type, ...payload }, "*");
+      } catch (e) {}
     }
-
+  
     function onCaptchaSuccess(token) {
       post("captcha-success", { token });
     }
-
+  
     function onCaptchaExpired() {
       post("captcha-expired", {});
     }
-
+  
     function onCaptchaError() {
       post("captcha-error", {});
     }
   </script>
+
 
 </body>
 </html>
