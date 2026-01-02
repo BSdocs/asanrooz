@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Verification</title>
+
+  <script src="https://www.google.com/recaptcha/api.js?hl=fa" async defer></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div
+    class="g-recaptcha"
+    data-sitekey="6LfgujssAAAAADfRVnLr063DFSR8o_70Aub5_ZSn"
+    data-callback="onCaptchaSuccess"
+    data-expired-callback="onCaptchaExpired"
+    data-error-callback="onCaptchaError">
+  </div>
+
+  <script>
+    function post(type, payload) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ type, ...payload });
+      }
+    }
+
+    function onCaptchaSuccess(token) {
+      post("captcha-success", { token });
+    }
+
+    function onCaptchaExpired() {
+      post("captcha-expired", {});
+    }
+
+    function onCaptchaError() {
+      post("captcha-error", {});
+    }
+  </script>
+
+</body>
+</html>
