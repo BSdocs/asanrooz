@@ -10,50 +10,59 @@
   <style>
     html, body {
       margin: 0;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 0;
       background: #fff;
+      overflow: hidden; /* مهم: حذف اسکرول */
+    }
+
+    body {
+      display: flex;
+      justify-content: flex-start; /* نه center */
+      align-items: flex-start;
+    }
+
+    .captcha-wrapper {
+      width: 304px;   /* عرض استاندارد reCAPTCHA v2 */
+      height: 78px;   /* ارتفاع استاندارد */
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
 
-  <div
-    class="g-recaptcha"
-    data-sitekey="6LfgujssAAAAADfRVnLr063DFSR8o_70Aub5_ZSn"
-    data-callback="onCaptchaSuccess"
-    data-expired-callback="onCaptchaExpired"
-    data-error-callback="onCaptchaError">
+  <div class="captcha-wrapper">
+    <div
+      class="g-recaptcha"
+      data-sitekey="6LfgujssAAAAADfRVnLr063DFSR8o_70Aub5_ZSn"
+      data-callback="onCaptchaSuccess"
+      data-expired-callback="onCaptchaExpired"
+      data-error-callback="onCaptchaError">
+    </div>
   </div>
 
   <script>
     function post(type, payload) {
-      // 1) ارسال پیام برای WebView2 (مثل قبل)
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage({ type, ...payload });
       }
-  
-      // 2) ارسال پیام برای صفحه والد (login.html)
+
       try {
         window.parent.postMessage({ type, ...payload }, "*");
       } catch (e) {}
     }
-  
+
     function onCaptchaSuccess(token) {
       post("captcha-success", { token });
     }
-  
+
     function onCaptchaExpired() {
       post("captcha-expired", {});
     }
-  
+
     function onCaptchaError() {
       post("captcha-error", {});
     }
   </script>
-
 
 </body>
 </html>
