@@ -12,19 +12,22 @@
       margin: 0;
       padding: 0;
       background: #fff;
-      overflow: hidden; /* مهم: حذف اسکرول */
+      overflow: hidden; /* حذف اسکرول */
     }
 
     body {
       display: flex;
-      justify-content: flex-start; /* نه center */
-      align-items: flex-start;
+      align-items: center;
+      justify-content: center;
     }
 
     .captcha-wrapper {
-      width: 304px;   /* عرض استاندارد reCAPTCHA v2 */
-      height: 78px;   /* ارتفاع استاندارد */
+      width: 304px;
+      height: 78px;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 </head>
