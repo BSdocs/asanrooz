@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Verification</title>
 
+  <!-- Google reCAPTCHA v2 -->
   <script src="https://www.google.com/recaptcha/api.js?hl=fa" async defer></script>
 
   <style>
@@ -12,17 +13,19 @@
       margin: 0;
       padding: 0;
       background: #fff;
-      overflow: hidden; /* حذف اسکرول */
+      overflow: hidden;     /* حذف کامل اسکرول */
+      height: 100%;
     }
 
     body {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: center;  /* مرکز عمودی */
+      justify-content: center; /* مرکز افقی */
+      min-height: 100vh;    /* کلید حل مشکل مودال */
     }
 
     .captcha-wrapper {
-      width: 304px;
+      width: 304px;         /* سایز استاندارد reCAPTCHA v2 */
       height: 78px;
       overflow: hidden;
       display: flex;
@@ -31,6 +34,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <div class="captcha-wrapper">
@@ -45,10 +49,12 @@
 
   <script>
     function post(type, payload) {
+      /* WebView2 */
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage({ type, ...payload });
       }
 
+      /* صفحه والد (login.html) */
       try {
         window.parent.postMessage({ type, ...payload }, "*");
       } catch (e) {}
